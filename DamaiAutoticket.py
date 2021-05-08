@@ -1,4 +1,4 @@
-# https://detail.damai.cn/item.htm?spm=a2oeg.search_category.searchtxt.ditem_0.49164d155LmBXu&id=643803994352
+# https://detail.damai.cn/item.htm?spm=a2oeg.search_category.0.0.77824d152ifYkZ&id=643404299163&clicktitle=%E6%B5%A6%E5%8F%91%E5%8D%93%E4%BF%A1%E5%80%BE%E6%83%85%E5%91%88%E7%8C%AE%E8%88%9E%E5%89%A7%E3%80%8A%E6%B0%B8%E4%B8%8D%E6%B6%88%E9%80%9D%E7%9A%84%E7%94%B5%E6%B3%A2%E3%80%8B
 
 # coding: utf-8
 from json import loads
@@ -103,7 +103,7 @@ class Concert(object):
         if self.browser == 0:  # 选择了Chrome浏览器，并成功加载cookie，设置不载入图片，提高刷新效率
             options = webdriver.ChromeOptions()
             prefs = {"profile.managed_default_content_settings.images": 2}
-            options.add_experimental_option("prefs", prefs)
+            # options.add_experimental_option("prefs", prefs)
             self.driver = webdriver.Chrome(options=options)
         elif self.browser == 1:  # 选择了火狐浏览器
             options = webdriver.FirefoxProfile()
@@ -137,7 +137,6 @@ class Concert(object):
         self.time_start = time()
         print("###开始进行日期及票价选择###")
 
-        print("-----", self.driver.title, self.driver.title.find('确认订单'))
         while self.driver.title.find('确认订单') == -1:  # 如果跳转到了确认界面就算这步成功了，否则继续执行此步
             self.num += 1  # 记录抢票轮数
 
@@ -221,7 +220,7 @@ class Concert(object):
                 self.status = 4
 
             elif buybutton_text == "选座购买":  # 选座购买暂时无法完成自动化
-                buybutton.click()
+                # buybutton.click()
                 self.status = 5
                 print("###请自行选择位置和票价###")
                 break
@@ -321,11 +320,6 @@ class Concert(object):
             # 目前没有找到缺货没有按钮的情况
 
     def check_order_1(self):
-
-        if self.status in [5]:
-            print('##开始选座购票##')
-            while 1:
-                sleep(1)
 
         if self.status in [3, 4]:
             print('###开始确认订单###')
@@ -440,6 +434,6 @@ if __name__ == '__main__':
                 con.check_order_2()
             # break
         except Exception as e:
-            print(e)
+            print("抢票失败:", e)
             con.driver.get(con.target_url)
-    con.finish()
+    # con.finish()
