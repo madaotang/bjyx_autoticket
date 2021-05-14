@@ -10,7 +10,9 @@ from time import sleep, time
 
 
 class Concert(object):
-    def __init__(self, browser, target_url, date, ticket_num, receiver):
+    def __init__(self, browser, target_url, date, ticket_num, receiver, viewer, target_price):
+        self.viewer = viewer  # 观演人序号,目前还不能用,
+        self.target_price = target_price
         self.receiver = receiver
         self.ticket_num = ticket_num
         self.date = date  # 日期选择
@@ -18,7 +20,7 @@ class Concert(object):
         self.target_url = target_url
         self.baoli_url = "https://www.polyt.cn/"
         self.browser = browser  # 0代表Chrome，1代表Firefox，默认为Chrome
-        self.total_wait_time = 3  # 页面元素加载总等待时间
+        self.total_wait_time = 1000  # 页面元素加载总等待时间
         self.refresh_wait_time = 0.3  # 页面元素等待刷新时间
         self.intersect_wait_time = 0.5  # 间隔等待时间，防止速度过快导致问题
         self.time_start = 0  # 开始时间
@@ -109,6 +111,40 @@ class Concert(object):
             self.driver.quit()
             raise Exception("***错误：登录失败,请检查配置文件昵称或删除cookie.pkl后重试***")
 
+    def choose_date(self):
+        datepicker = WebDriverWait(self.driver, self.total_wait_time, self.refresh_wait_time).until(
+            EC.presence_of_element_located(
+                (By.CLASS_NAME, "choiceTime")))
+        datelist = datepicker.find_elements_by_tag_name("span")
+
+        for i, j in enumerate(self.date):
+
+            try:
+                # print("第", i, "次选座, 选择第", j, "日")
+                datelist[j].click()
+
+                buy_btn = self.driver.find_element_by_class_name('buy-btn')
+                buy_btn.click()
+                sleep(0.5)
+
+            except Exception as e:
+                print(e, "该天已不可选, 选择剩余日")
+
+    # def choose_price(self):
+    #     prices = WebDriverWait(self.driver, self.total_wait_time, self.refresh_wait_time).until(
+    #         EC.presence_of_element_located(
+    #             (By.CLASS_NAME, "choicePrice")))
+    #     prices_list = prices.find_elements_by_tag_name('button')
+    #
+    #     for i in self.target_price:
+    #         price = prices_list[i]
+    #         if price.is_enabled():
+    #             price.click()
+    #             print("##成功选择第", i, "档票")
+    #             return True
+    #
+    #     return False
+
     def choose_ticket(self):
         self.time_start = time()
         print("###开始进行日期及票价选择###")
@@ -123,44 +159,15 @@ class Concert(object):
                 print('---尚未开售，刷新等待---')
                 continue
             else:
-                try:
-                    self.num += 1  # 记录抢票轮数
-                    if self.date != 0:  # 如果要选择日期
-                        datepicker = WebDriverWait(self.driver, self.total_wait_time, self.refresh_wait_time).until(
-                            EC.presence_of_element_located(
-                                (By.CLASS_NAME, "choiceTime")))
-                        datelist = datepicker.find_elements_by_tag_name("span")
-                        validlist = []
-                        for i in range(len(datelist)):  # 筛选出所有可选择日期
-                            j = datelist[i]
-                            k = j.get_attribute('class')
-                            if k == 'active':
-                                validlist.append(j)
-                        validlist[self.date - 1].click()
-
-                    # 选择票价choicePrice
-                    prices = WebDriverWait(self.driver, self.total_wait_time, self.refresh_wait_time).until(
-                        EC.presence_of_element_located(
-                            (By.CLASS_NAME, "choicePrice")))
-                    prices_list = prices.find_elements_by_tag_name('button')
-                    validprice_list = []
-                    for i in range(len(prices_list)):
-                        price = prices_list[i]
-                        if price.is_enabled():
-                            validprice_list.append(price)
-
-                    validprice_list[0].click()
-
-                    buy_btn = self.driver.find_element_by_class_name('buy-btn')
-                    buy_btn.click()
-                except Exception as e:
-                    print(e)
-
-        print("###日期和票价选择成功###")
+                self.num += 1  # 记录抢票轮数
+                self.choose_date()
+                print("###日期和票价选择成功###")
 
     def choose_pos(self):
         print("###开始选座###")
-        while self.driver.title.find('确认订单') == -1:  # 如果跳转到了确认界面就算这步成功了，否则继续执行此步
+        # while self.driver.title.find('确认订单') == -1:  # 如果跳转到了确认界面就算这步成功了，否则继续执行此步
+
+        while True:
 
             seats_container = WebDriverWait(self.driver, self.total_wait_time, self.refresh_wait_time).until(
                 EC.presence_of_element_located(
@@ -172,7 +179,7 @@ class Concert(object):
 
             print("可选座位数", len(seats))
             ticket = 0
-            for i in range(len(seats)):
+            for i in range(round(len(seats)/2)):
                 seat = seats[i]
                 if seat.get_attribute("style").find('not-allowed') == -1:
                     seat.click()
@@ -180,12 +187,19 @@ class Concert(object):
                     ticket += 1
                     if ticket == self.ticket_num:
                         break
+            # 如果无座位
+            if ticket == 0:
+                print("无座位可选")
+                self.driver.refresh()
+            else:
+                # self.driver.refresh()
+                print("!!!!!!!!!!!有位置了!!!!!!!!!")
+                break
 
-                # click pay
-
-            c_btn = WebDriverWait(self.driver, self.total_wait_time, self.refresh_wait_time).until(
-                    EC.element_to_be_clickable((By.XPATH, '//*[@id="target"]/div/div[4]/button')))
-            c_btn.click()
+        # click pay
+        c_btn = WebDriverWait(self.driver, self.total_wait_time, self.refresh_wait_time).until(
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="target"]/div/div[4]/button')))
+        c_btn.click()
 
         print("###选座成功###")
 
@@ -210,11 +224,12 @@ class Concert(object):
 
             while 1:
                 try:
-                    viewer_btn = viewer_list[i].find_element_by_tag_name('button')
+                    viewer_btn = viewer_list[self.viewer[1]].find_element_by_tag_name('button')
                     viewer_btn.click()
                     break
                 except Exception as e:
-                    print("重试实名选人")
+
+                    print(e, "重试实名选人")
 
             viewer_id_container = WebDriverWait(self.driver, self.total_wait_time, self.refresh_wait_time).until(
                 EC.presence_of_element_located(
@@ -230,7 +245,8 @@ class Concert(object):
         print("###确认支付###")
         while 1:
             try:
-                # self.driver.find_element_by_css_selector('#app > div > div > div > div.frame-body.mg-t-30 > div.text-right.pd-t-20.mg-b-50 > div.disFlex.hor-right.mg-t-20 > div > button').click()
+                self.driver.find_element_by_css_selector(
+                    '#app > div > div > div > div.frame-body.mg-t-30 > div.text-right.pd-t-20.mg-b-50 > div.disFlex.hor-right.mg-t-20 > div > button').click()
                 break
             except Exception as e:
                 print("重试确认")
@@ -239,14 +255,27 @@ class Concert(object):
         self.time_end = time()
         print("###用时: ", self.time_end - self.time_start, ' s')
 
+    def finish(self):
+        if self.status == 6:  # 说明抢票成功
+            print("###经过%d轮奋斗，共耗时%f秒，抢票成功！请确认订单信息###" % (self.num, round(self.time_end - self.time_start, 3)))
+        else:
+            self.driver.quit()
+
 
 if __name__ == '__main__':
-    target_url = 'https://www.polyt.cn/show/576374916496547840/725/28907'
-    date = 1
-    ticket_num = 1
+    target_url = 'https://www.polyt.cn/show/594121812962119680/40/30551'
+    date = [2, 5, 1, 4, 3, 0]
+    target_price = [9, 8, 7, 6, 5]
+    ticket_num = 2
     receiver = "郭小星"
-    con = Concert(0, target_url, date, ticket_num, receiver)
-    con.enter_concert()
-    con.choose_ticket()
-    con.choose_pos()
-    con.choose_user()
+    viewer = [0, 1]
+    con = Concert(0, target_url, date, ticket_num, receiver, viewer, target_price)
+    # while True:
+    try:
+        con.enter_concert()
+        con.choose_ticket()
+        con.choose_pos()
+        con.choose_user()
+    except Exception as e:
+        print("抢票失败", e)
+        con.driver.get(con.target_url)
