@@ -1,3 +1,4 @@
+import _thread
 import os
 import re
 import time
@@ -18,12 +19,13 @@ damai_url = "https://www.damai.cn/"
 # 登录页
 login_url = "https://passport.damai.cn/login?ru=https%3A%2F%2Fwww.damai.cn%2F"
 # 抢票目标页
-target_url = 'https://detail.damai.cn/item.htm?spm=a2oeg.search_category.0.0.1d9b6a63WSaGQw&id=643803994352&clicktitle=%E5%BE%B7%E4%BA%91%E7%A4%BE%E7%9B%B8%E5%A3%B0%E5%A4%A7%E4%BC%9A%E2%80%94%E2%80%94%E5%A4%A9%E6%B4%A5%E5%BE%B7%E4%BA%91%E7%A4%BE'
+target_url = 'https://detail.damai.cn/item.htm?spm=a2oeg.search_category.0.0.267a4d156bKiHo&id=644672951150&clicktitle=%E5%BC%80%E5%BF%83%E9%BA%BB%E8%8A%B12021%E5%B9%B4%E4%B8%AD%E5%A4%A7%E6%88%8F%E3%80%8A%E5%8F%8C%E5%9F%8E%E7%8E%AF%E6%A2%A6%E8%AE%B0%E3%80%8B'
 name = ""
 phone = ""
-target_price = [5, 4, 3, 2, 1]
-target_session = [1]
-target_date = 9
+target_price = 2
+target_session = [2]
+target_date = 0
+target_title = '开心麻花'
 
 
 class Concert(object):
@@ -97,10 +99,8 @@ class Concert(object):
             pop_up.find_element_by_xpath('/html/body/div[2]/div[2]/div/div/div[3]/div[2]').click()
 
     def choose_ticket(self):
-        if self.status == 2:  # 登录成功入口
-            self.num = 1  # 第一次尝试
-
-            while self.driver.title.find('确认订单') == -1:  # 如果跳转到了订单结算界面就算这步成功了，否则继续执行此步
+        while True:
+            if self.driver.title.find(target_title) != -1:
                 # print(self.driver.title)
                 # try:各种按钮的点击,
                 try:
@@ -110,24 +110,13 @@ class Concert(object):
                         self.driver.get(target_url)
                         print('###抢票未开始，刷新等待开始###')
                         continue
-                    elif buybutton == "立即预定":
-                        self.choose_date_old()
-                        self.driver.find_element_by_class_name('buybtn').click()
-                        self.status = 3
-                        self.num = 1
-                    elif buybutton == "立即购买":
-                        self.choose_date_old()
-                        self.driver.find_element_by_class_name('buybtn').click()
-                        self.status = 4
-                    # 选座购买暂时无法完成自动化
                     elif buybutton == "选座购买":
-                        self.choose_date_old()
+                        self.choose_date()
                         self.status = 5
                         self.driver.find_element_by_class_name('buybtn').click()
                         print("自助选票")
-                        break
-                    elif buybutton == "提交缺货登记":
-                        print("="*30)
+                    else:
+                        print("=" * 30)
                         print("###GG,没票了###")
                 except Exception as e:
                     print(e, '###未跳转到订单结算界面###')
@@ -136,11 +125,11 @@ class Concert(object):
                 #     self.status=2
                 #     self.driver.get(target_url)
                 #     print('###抢票失败，从新开始抢票###')
-            print("###日期和票价选择成功###")
+                print("###日期和票价选择成功###")
+            else:
+                time.sleep(0.2)
 
-
-
-    def choose_date_old(self):
+    def choose_date(self):
         print("=" * 30)
         print("###消除弹窗###")
         # self.dismiss_popup()
@@ -185,66 +174,14 @@ class Concert(object):
 
         price = WebDriverWait(self.driver, self.total_wait_time, self.refresh_wait_time).until(
             EC.presence_of_element_located(
-                (By.CSS_SELECTOR, 'body > div.perform > div.w1200.box.flex > div.flex1 > div.hd > div > div.order '
-                                  '> div.perform__order__box > div:nth-child(7) > div.select_right')))
+                (By.XPATH, '/html/body/div[2]/div/div[1]/div[1]/div/div[2]/div[3]/div[5]/div[2]/div')))
         # price = self.driver.find_element_by_id('priceList')
 
-        price_list = price.find_element_by_class_name('select_right_list').find_elements_by_class_name(
+        price_list = price.find_elements_by_class_name(
             'select_right_list_item')
 
         print('可选票档数量为：{}'.format(len(price_list)))
-        for i in target_price:
-            print("选择第", i, "档")
-            j = price_list[i - 1]
-            try:
-                j.click()
-                break
-            except Exception as e:
-                print(e, "无法点击")
-                continue
-
-    def choice_seats(self):
-
-        print("---------------", self.driver.title)
-        try:
-            while self.driver.title == '选座购买':
-                while self.isElementExist('//*[@id="app"]/div[2]/div[2]/div[1]/div[2]/img'):
-                    print('请快速的选择您的座位！！！')
-                while self.isElementExist('//*[@id="app"]/div[2]/div[2]/div[2]/div'):
-                    self.driver.find_element_by_xpath('//*[@id="app"]/div[2]/div[2]/div[2]/button').click()
-
-            self.status = 3
-        except Exception as e:
-            print(e)
-
-        # self.check_order()
-
-        # submit_btn = WebDriverWait(self.driver, self.total_wait_time, self.refresh_wait_time).until(
-        #     EC.presence_of_element_located((By.XPATH, '//*[@id="app"]/div[2]/div[2]/div[2]/button')))
-        # submit_btn.click()
-
-    def check_order(self):
-
-        if self.status in [5]:
-            print("###开始自行选座###")
-            self.choice_seats()
-
-        if self.status in [3, 4]:
-            print('###开始确认订单###')
-
-            try:
-                # 默认选第一个购票人信息
-                self.driver.find_element_by_xpath(
-                    '//*[@id="confirmOrder_1"]/div[2]/div[2]/div[1]/div[1]/label/span[1]').click()
-
-            except Exception as e:
-                print("###购票人信息选中失败，自行查看元素位置###")
-                print(e)
-
-            # 最后一步提交订单
-
-            time.sleep(0.5)  # 太快会影响加载，导致按钮点击无效
-            self.driver.find_elements_by_xpath('//div[@class = "w1200"]//div[2]//div//div[9]//button[1]')[0].click()
+        price_list[len(price_list) - target_price].click()
 
     def finish(self):
         self.driver.quit()
@@ -259,18 +196,40 @@ class Concert(object):
         except:
             flag = False
             return flag
+
+    def check(self):
+        while True:
+            if self.driver.title == '确认订单':
+                print('###开始确认订单###')
+
+                time.sleep(0.3)  # 太快会影响加载，导致按钮点击无效
+                # self.driver.find_elements_by_xpath('//*[@id="confirmOrder_1"]/div[8]/button')[0].click()
+            else:
+                sleep(0.2)
+
+    def monitor_seats_choose(self):
+        while True:
+            if self.isElementExist('//*[@id="app"]/div[2]/div[2]/div[2]/div'):
+                self.driver.find_element_by_xpath('//*[@id="app"]/div[2]/div[2]/div[2]/button').click()
+            else:
+                sleep(0.2)
+
+    def start(self):
+        self.enter_concert()
+        try:
+            _thread.start_new_thread(con.choose_ticket, ())
+            _thread.start_new_thread(con.monitor_seats_choose, ())
+            _thread.start_new_thread(con.check, ())
+
+        except:
+            print("Error: 无法启动线程")
+
+        while 1:
+            pass
+
+
 # 手慢了，您选择的座位已被抢占，请重新选择
 
 if __name__ == '__main__':
-    con = Concert()  # 具体如果填写请查看类中的初始化函数
-    # while True:
-    # try:
-    con.enter_concert()
-    con.choose_ticket()
-    con.check_order()
-    # break
-    # except Exception as e:
-    #     print("抢票失败 重试", e)
-    #     con.driver.get(target_url)
-
-    # con.finish()
+    con = Concert()  # 具体如果填写请查看类中的初始化函
+    con.start()

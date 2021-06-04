@@ -18,12 +18,12 @@ damai_url = "https://www.damai.cn/"
 # 登录页
 login_url = "https://passport.damai.cn/login?ru=https%3A%2F%2Fwww.damai.cn%2F"
 # 抢票目标页
-target_url = 'https://detail.damai.cn/item.htm?spm=a2oeg.search_category.0.0.1d9b6a63WSaGQw&id=643803994352&clicktitle=%E5%BE%B7%E4%BA%91%E7%A4%BE%E7%9B%B8%E5%A3%B0%E5%A4%A7%E4%BC%9A%E2%80%94%E2%80%94%E5%A4%A9%E6%B4%A5%E5%BE%B7%E4%BA%91%E7%A4%BE'
+target_url = 'https://detail.damai.cn/item.htm?spm=a2oeg.search_category.0.0.267a4d156bKiHo&id=644672951150&clicktitle=%E5%BC%80%E5%BF%83%E9%BA%BB%E8%8A%B12021%E5%B9%B4%E4%B8%AD%E5%A4%A7%E6%88%8F%E3%80%8A%E5%8F%8C%E5%9F%8E%E7%8E%AF%E6%A2%A6%E8%AE%B0%E3%80%8B'
 name = ""
 phone = ""
-target_price = [5, 4, 3, 2, 1]
+target_price = 2
 target_session = [1]
-target_date = 9
+target_date = 1
 
 
 class Concert(object):
@@ -122,13 +122,16 @@ class Concert(object):
                     # 选座购买暂时无法完成自动化
                     elif buybutton == "选座购买":
                         self.choose_date()
-                        self.status = 5
+                        time.sleep(0.2)
                         self.driver.find_element_by_class_name('buybtn').click()
+                        print("="*30)
+                        self.status = 5
                         print("自助选票")
                         break
                     elif buybutton == "提交缺货登记":
                         print("="*30)
                         print("###GG,没票了###")
+                        sleep(1)
                 except Exception as e:
                     print(e, '###未跳转到订单结算界面###')
 
@@ -183,26 +186,17 @@ class Concert(object):
 
         price = WebDriverWait(self.driver, self.total_wait_time, self.refresh_wait_time).until(
             EC.presence_of_element_located(
-                (By.CSS_SELECTOR, 'body > div.perform > div.w1200.box.flex > div.flex1 > div.hd > div > div.order '
-                                  '> div.perform__order__box > div:nth-child(7) > div.select_right')))
+                (By.XPATH, '/html/body/div[2]/div/div[1]/div[1]/div/div[2]/div[3]/div[5]/div[2]/div')))
         # price = self.driver.find_element_by_id('priceList')
 
-        price_list = price.find_element_by_class_name('select_right_list').find_elements_by_class_name(
+        price_list = price.find_elements_by_class_name(
             'select_right_list_item')
 
         print('可选票档数量为：{}'.format(len(price_list)))
-        for i in target_price:
-            print("选择第", i, "档")
-            j = price_list[i - 1]
-            try:
-                j.click()
-                break
-            except Exception as e:
-                print(e, "无法点击")
-                continue
+        price_list[len(price_list)-target_price].click()
 
     def choice_seats(self):
-
+        time.sleep(0.2)
         print("---------------", self.driver.title)
         try:
             while self.driver.title == '选座购买':
@@ -222,6 +216,7 @@ class Concert(object):
         # submit_btn.click()
 
     def check_order(self):
+        print("-----------", self.status)
 
         if self.status in [5]:
             print("###开始自行选座###")
@@ -242,7 +237,7 @@ class Concert(object):
             # 最后一步提交订单
 
             time.sleep(0.5)  # 太快会影响加载，导致按钮点击无效
-            self.driver.find_elements_by_xpath('//div[@class = "w1200"]//div[2]//div//div[9]//button[1]')[0].click()
+            #self.driver.find_elements_by_xpath('//*[@id="confirmOrder_1"]/div[8]/button')[0].click()
 
     def finish(self):
         self.driver.quit()
